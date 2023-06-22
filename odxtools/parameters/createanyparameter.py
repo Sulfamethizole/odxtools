@@ -19,6 +19,7 @@ from .tableentryparameter import TableEntryParameter
 from .tablekeyparameter import TableKeyParameter
 from .tablestructparameter import TableStructParameter
 from .valueparameter import ValueParameter
+from xml.etree.ElementTree import Element
 
 
 def create_any_parameter_from_et(et_element, doc_frags):
@@ -212,7 +213,6 @@ def create_any_parameter_from_et(et_element, doc_frags):
         )
 
     elif parameter_type == "TABLE-KEY":
-
         parameter_id = OdxLinkId.from_et(et_element, doc_frags)
         table_ref = OdxLinkRef.from_et(et_element.find("TABLE-REF"), doc_frags)
         table_snref = (
@@ -222,6 +222,9 @@ def create_any_parameter_from_et(et_element, doc_frags):
             et_element.find("TABLE-ROW-SNREF").get("SHORT-NAME")
             if et_element.find("TABLE-ROW-SNREF") is not None else None)
         row_ref = OdxLinkRef.from_et(et_element.find("TABLE-ROW-REF"), doc_frags)
+        if not table_ref and row_ref:
+            row_ref_elem = et_element.find("TABLE-ROW-REF")
+            table_ref = OdxLinkRef.from_et(Element("TABLE-REF",dict([("ID-REF", row_ref_elem.get("ID-REF").split('.')[0])])), doc_frags)
 
         return TableKeyParameter(
             short_name=short_name,

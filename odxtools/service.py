@@ -36,6 +36,7 @@ class DiagService:
         functional_class_refs: Iterable[OdxLinkRef],
         pre_condition_state_refs: Iterable[OdxLinkRef],
         state_transition_refs: Iterable[OdxLinkRef],
+        states_refs: Iterable[OdxLinkRef],
         sdgs: List[SpecialDataGroup],
     ):
         """Constructs the service.
@@ -62,6 +63,7 @@ class DiagService:
         self._pre_condition_states: Union[List[State], NamedItemList[State]] = []
         self.state_transition_refs: List[OdxLinkRef] = list(state_transition_refs)
         self._state_transitions: Union[List[StateTransition], NamedItemList[StateTransition]] = []
+        self.states_refs: List[OdxLinkRef] = list(states_refs)
 
         self._request: Optional[Request]
         self.request_ref: OdxLinkRef
@@ -111,7 +113,6 @@ class DiagService:
 
     @staticmethod
     def from_et(et_element, doc_frags: List[OdxDocFragment]):
-
         # logger.info(f"Parsing service based on ET DiagService element: {et_element}")
         short_name = et_element.findtext("SHORT-NAME")
         odx_id = OdxLinkId.from_et(et_element, doc_frags)
@@ -150,6 +151,12 @@ class DiagService:
             assert ref is not None
             state_transition_refs.append(ref)
 
+        states_refs = []
+        for el in et_element.iterfind("RELATED-DIAG-COMM-REFS/RELATED-DIAG-COMM-REF"):
+            ref = OdxLinkRef.from_et(el, doc_frags)
+            assert ref is not None
+            states_refs.append(ref)
+
         long_name = et_element.findtext("LONG-NAME")
         description = create_description_from_et(et_element.find("DESC"))
         admin_data = AdminData.from_et(et_element.find("ADMIN-DATA"), doc_frags)
@@ -165,6 +172,7 @@ class DiagService:
             odx_id=odx_id,
             short_name=short_name,
             request=request_ref,
+            states_refs=states_refs,
             positive_responses=pos_res_refs,
             negative_responses=neg_res_refs,
             long_name=long_name,
@@ -218,6 +226,10 @@ class DiagService:
     def state_transitions(self):
         return self._state_transitions
 
+    @property
+    def states(self):
+        return self._states
+
     def _build_odxlinks(self):
         result = {}
 
@@ -242,6 +254,11 @@ class DiagService:
         ])
         self._state_transitions = NamedItemList(short_name_as_id, [
             odxlinks.resolve(stt_id) for stt_id in self.state_transition_refs
+        ])
+        #if self.states_refs:
+            #import ipdb; ipdb.set_trace()
+        self._states = NamedItemList(short_name_as_id, [
+            odxlinks.resolve(sts_id) for sts_id in self.states_refs
         ])
         if self.audience:
             self.audience._resolve_references(odxlinks)
